@@ -869,15 +869,30 @@ export default function Marketplace() {
                             Cancel request
                           </button>
                         )}
-                      {p.pro_id && user.role === "customer" && (
+                      {p.pro_id && (
                         <button
                           className="text-btn"
                           onClick={() => {
-                            const pro = pros.find((x) => x.id === p.pro_id);
-                            if (pro) void contact(pro);
+                            const conversation = conversations.find(
+                              (c) =>
+                                c.customer_id === p.customer_id &&
+                                c.pro_id === p.pro_id,
+                            );
+                            if (conversation) {
+                              setActiveId(conversation.id);
+                              setTab("messages");
+                            } else {
+                              const pro = pros.find((x) => x.id === p.pro_id);
+                              if (pro && user.role === "customer")
+                                void contact(pro);
+                              else
+                                toast.info(
+                                  "Refresh to load this conversation.",
+                                );
+                            }
                           }}
                         >
-                          Message pro <MessageCircle size={15} />
+                          Open conversation <MessageCircle size={15} />
                         </button>
                       )}
                     </div>

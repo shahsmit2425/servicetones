@@ -269,7 +269,15 @@ export function createApp({
     db.prepare("INSERT INTO projects VALUES(?,?,?,?,?,?,?,?,?)").run(
       ...Object.values(p),
     );
-    if (p.pro_id) io.to(p.pro_id).emit("project", p);
+    if (p.pro_id) {
+      db.prepare("INSERT OR IGNORE INTO conversations VALUES(?,?,?,?)").run(
+        id(),
+        p.customer_id,
+        p.pro_id,
+        now(),
+      );
+      io.to(p.pro_id).emit("project", p);
+    }
     r.status(201).json(p);
   });
   app.patch("/api/projects/:id", auth, (q, r) => {
@@ -319,6 +327,12 @@ export function createApp({
     if (!pro || pro.category !== p.category)
       fail(400, "Choose a professional for this service.");
     db.prepare("UPDATE projects SET pro_id=? WHERE id=?").run(pro_id, p.id);
+    db.prepare("INSERT OR IGNORE INTO conversations VALUES(?,?,?,?)").run(
+      id(),
+      p.customer_id,
+      pro_id,
+      now(),
+    );
     io.to(pro_id).emit("project", { ...p, pro_id });
     r.json({ ...p, pro_id });
   });
@@ -487,13 +501,11 @@ export function createApp({
       if (!getUser(s.data.token)) s.disconnect(true);
     for (const [cid, c] of calls)
       if (c.expires < Date.now()) {
-        io.to(c.caller)
-          .to(c.peer)
-          .emit("signal", {
-            type: "end",
-            callId: cid,
-            conversationId: c.conversationId,
-          });
+        io.to(c.caller).to(c.peer).emit("signal", {
+          type: "end",
+          callId: cid,
+          conversationId: c.conversationId,
+        });
         calls.delete(cid);
       }
   }, 5000);

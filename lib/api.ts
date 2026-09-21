@@ -31,11 +31,9 @@ export async function api<T>(
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   if (response.status === 204) return undefined as T;
-  const data = (await response
-    .json()
-    .catch(() => ({
-      error: "Service is unavailable. Please try again later.",
-    }))) as { error?: string };
+  const data = (await response.json().catch(() => {
+    throw new Error("Service is unavailable. Please try again later.");
+  })) as { error?: string };
   if (!response.ok)
     throw new Error(data.error || "Unable to complete this request.");
   return data as T;

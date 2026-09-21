@@ -94,6 +94,10 @@ test("accounts, private projects, durable messages and consent-gated call signal
       assert.equal(result.status, 201);
       project = result.data;
       assert.equal(
+        (await request("/conversations", null, pro.token)).data.length,
+        1,
+      );
+      assert.equal(
         (await request("/projects", null, stranger.token)).data.length,
         0,
       );
