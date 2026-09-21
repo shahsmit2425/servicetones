@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001,capacitor://localhost,https://localhost}
+      TURN_URL: ${TURN_URL:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+    volumes:
+      - servicetones-data:/data
+    restart: unless-stopped
+volumes:
+  servicetones-data:

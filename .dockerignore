@@ -1,0 +1,12 @@
+node_modules
+.git
+.env
+.env.*
+data
+dist
+.sites-runtime
+.wrangler
+android
+ios
+work
+outputs
