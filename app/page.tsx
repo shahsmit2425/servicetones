@@ -1,1 +1,1 @@
-export { default } from "@/components/marketplace";
+export { default } from "@/components/preview-app";

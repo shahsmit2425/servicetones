@@ -11,11 +11,13 @@
     "build": "tsc --noEmit && vite build --config vite.app.config.ts",
     "start": "node server/index.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test": "node --test server/test/*.test.mjs",
+    "test": "npm run test:api && npm run test:demo",
     "mobile:sync": "npm run build && cap sync",
     "mobile:ios": "cap open ios",
     "mobile:android": "cap open android",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "test:api": "node --test server/test/*.test.mjs",
+    "test:demo": "node --experimental-strip-types --test demo/test/*.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

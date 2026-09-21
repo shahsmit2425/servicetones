@@ -2,6 +2,12 @@
 
 A home-services marketplace for the web, iOS, and Android, in one repository. Customers can find professionals, request projects, exchange private messages, and make foreground audio/video calls.
 
+## Explore the complete demo
+
+The app now opens an interactive preview with **25 page types, three roles, and 14 guided scenarios**. No signup is required. Use the top-bar role selector to explore Customer, Provider, or Admin, and choose **Explore all pages** for the directory. Demo actions update shared fictional data and are saved in this browser. Payments, calls, account recovery, support, and moderation in this preview are clearly labeled simulations.
+
+The original backend-connected application is available through **Open live app** (`/#live`). See [the preview guide](docs/PREVIEW.md) for the full page list and end-to-end walkthroughs.
+
 ## Included
 
 - Responsive React interface with service search, ZIP filtering, saved professionals and profile details.
