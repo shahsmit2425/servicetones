@@ -3,17 +3,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_URL=""
-ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 FROM node:22-bookworm-slim
-ENV NODE_ENV=production PORT=3001 DATABASE_PATH=/data/servicetones.sqlite
+ENV NODE_ENV=production PORT=10000
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev && mkdir /data && chown node:node /data
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
-COPY server ./server
+COPY src ./src
 USER node
-VOLUME ["/data"]
-EXPOSE 3001
-CMD ["node", "server/index.mjs"]
+EXPOSE 10000
+CMD ["npm","start"]
