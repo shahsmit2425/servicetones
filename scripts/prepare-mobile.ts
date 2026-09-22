@@ -10,6 +10,8 @@ const branch =
 const target = mapping[branch as keyof typeof mapping];
 if (!target)
   throw new Error("Mobile builds require a mapped deployment branch.");
+if (process.env.APP_ENV && process.env.APP_ENV !== target.environment)
+  throw new Error("APP_ENV must match the selected deployment branch.");
 const site = process.env.SITE_URL;
 if (!site || !site.startsWith("https://"))
   throw new Error("Set SITE_URL to the deployed HTTPS environment.");
