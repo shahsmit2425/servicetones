@@ -1,0 +1,32 @@
+ROOT = File.expand_path("..", __dir__)
+default_platform(:ios)
+platform :ios do
+ desc "Build the matching environment and upload to TestFlight"
+ lane :beta do
+  api_key = app_store_connect_api_key(
+   key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+   key_content: ENV.fetch("ASC_KEY_BASE64"), is_key_content_base64: true
+  )
+  create_keychain(name: "servicetones-ci", password: ENV.fetch("KEYCHAIN_PASSWORD"), default_keychain: false, unlock: true, timeout: 3600, lock_when_sleeps: false)
+  begin
+   import_certificate(certificate_path: ENV.fetch("IOS_CERTIFICATE_PATH"), certificate_password: ENV.fetch("IOS_CERTIFICATE_PASSWORD"), keychain_name: "servicetones-ci", keychain_password: ENV.fetch("KEYCHAIN_PASSWORD"))
+   install_provisioning_profile(path: ENV.fetch("IOS_PROFILE_PATH"))
+   update_project_provisioning(xcodeproj: File.join(ROOT, "ios/App/App.xcodeproj"), profile: ENV.fetch("IOS_PROFILE_PATH"), build_configuration: "Release", code_signing_identity: "Apple Distribution")
+   build_app(workspace: File.join(ROOT, "ios/App/App.xcworkspace"), scheme: "App", export_method: "app-store", output_directory: File.join(ROOT, "artifacts/ios"),
+    xcargs: "DEVELOPMENT_TEAM=" + ENV.fetch("APPLE_TEAM_ID") + " CODE_SIGN_STYLE=Manual",
+    export_options: { provisioningProfiles: { ENV.fetch("MOBILE_APP_ID") => ENV.fetch("IOS_PROFILE_NAME") } })
+   upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true, distribute_external: false)
+  ensure
+   delete_keychain(name: "servicetones-ci")
+  end
+ end
+end
+platform :android do
+ desc "Upload signed Android bundle to the matching Play testing/release track"
+ lane :release do
+  upload_to_play_store(package_name: ENV.fetch("MOBILE_APP_ID"), json_key: ENV.fetch("PLAY_JSON_PATH"),
+   aab: File.join(ROOT, "android/app/build/outputs/bundle/release/app-release.aab"), track: ENV.fetch("ANDROID_TRACK"),
+   release_status: ENV.fetch("APP_ENV") == "production" ? "draft" : "completed",
+   skip_upload_metadata: true, skip_upload_images: true, skip_upload_screenshots: true)
+ end
+end
