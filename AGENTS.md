@@ -2,6 +2,8 @@
 
 - Start all new work from development. Promote development → stagging → main through reviewed pull requests. Do not implement separate application logic for each environment.
 - Keep environment mapping in config/environments.json. Application values belong in Render environment groups, signing/deployment credentials in GitHub Environments. Never commit secrets or generated native Firebase files.
+- Admin UI changes belong only in apps/admin; never import admin screens into the customer bundle. Keep scripts/affected.mjs aligned with actual runtime dependencies.
+- Public frontends must never receive API secrets or DATABASE_URL. Admin access must fail closed without approved UID, claim, database role and recent TOTP authentication.
 - Web, iOS and Android share src/client, src/shared and src/styles.css. A UI or domain change must build for every platform.
 - Never introduce seeded marketplace users, fabricated ratings, sample transactions, bypass authentication or client-controlled administrator roles.
 - API authorization, validated amounts and lifecycle checks belong on the server. Stripe webhooks determine verification/payment outcomes.

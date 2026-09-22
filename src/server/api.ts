@@ -12,6 +12,7 @@ import {
   type Project,
 } from "../shared/domain.js";
 import { pool, camel, transaction } from "./db/index.js";
+import { assertAdmin } from "./admin-policy.js";
 import { verifyToken } from "./integrations/firebase.js";
 import { env, publicConfig } from "./config.js";
 import { fail } from "./errors.js";
@@ -44,6 +45,9 @@ declare global {
 type AuthRequest = Request;
 export const api = Router();
 api.get("/config", (_q, r) => r.json(publicConfig));
+api.get("/professionals/:id", async (q, r) =>
+  r.json(await publicProfiles(String(q.params.id))),
+);
 api.get("/professionals", async (_q, r) => r.json(await publicProfiles()));
 api.get("/health", async (_q, r) => {
   if (!env.DATABASE_URL)
@@ -78,8 +82,21 @@ api.use(async (req, res, next) => {
   ).rows[0];
   if (record) {
     q.account = camel<User>(record);
-    if (q.account.role === "admin" && !q.identity.admin)
-      fail(403, "Administrator access has been revoked.");
+  }
+  if (
+    /^\/admin(?:\/|$)/i.test(req.path) ||
+    q.account?.role === "admin" ||
+    q.identity.admin
+  ) {
+    assertAdmin(
+      decoded,
+      q.account,
+      env.ADMIN_ALLOWED_UIDS.split(",")
+        .map((x) => x.trim())
+        .filter(Boolean),
+    );
+    if (!/^\/admin(?:\/|$)/i.test(req.path))
+      fail(403, "Use the separate administrator application.");
   }
   next();
 });
@@ -89,12 +106,7 @@ api.post("/account", async (req, res) => {
   if (q.account) return res.json(q.account);
   await pool.query(
     "INSERT INTO users(id,email,name,role) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO NOTHING",
-    [
-      q.identity.uid,
-      q.identity.email,
-      data.name,
-      q.identity.admin ? "admin" : data.role,
-    ],
+    [q.identity.uid, q.identity.email, data.name, data.role],
   );
   res.status(201).json({ ok: true });
 });
@@ -637,6 +649,7 @@ api.use("/admin", (req, _res, next) => {
     fail(403, "Administrator access required.");
   next();
 });
+api.get("/admin/workspace", async (q, r) => r.json(await workspace(q.account)));
 api.post("/admin/profiles/:id", async (req, res) => {
   const q = req as AuthRequest;
   const { suspended } = z

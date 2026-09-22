@@ -1,19 +1,22 @@
-# Add credentials to the matching Render environment group. See docs/ENVIRONMENT_VARIABLES.md.
+# Four independent application/data services plus a mail worker in each environment.
+# Private environment groups attach only to API and worker.
 services:
   - type: web
-    name: servicetones-development
+    name: servicetones-development-api
     runtime: node
     plan: starter
     region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
     branch: development
     autoDeployTrigger: off
-    buildCommand: npm ci --include=dev && npm run build
-    startCommand: npm start
+    buildCommand: npm ci --include=dev
+    startCommand: npm run start:api
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-development
-      - key: DATABASE_URL
+      - fromGroup: servicetones-development-api
+      - &a1
+        key: DATABASE_URL
         fromDatabase:
           name: servicetones-development-db
           property: connectionString
@@ -22,30 +25,96 @@ services:
     runtime: node
     plan: starter
     region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
     branch: development
     autoDeployTrigger: off
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-development
-      - key: DATABASE_URL
-        fromDatabase:
-          name: servicetones-development-db
-          property: connectionString
+      - fromGroup: servicetones-development-api
+      - *a1
   - type: web
-    name: servicetones-stagging
+    name: servicetones-development-web
     runtime: node
     plan: starter
     region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
+    branch: development
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build:web
+    startCommand: npm run start:web
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: development
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: SITE_URL
+        sync: false
+      - key: API_URL
+        sync: false
+  - type: web
+    name: servicetones-development-admin
+    runtime: static
+    repo: https://github.com/shahsmit2425/servicetones
+    branch: development
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build:admin
+    staticPublishPath: dist/admin
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: VITE_APP_ENV
+        value: development
+      - key: VITE_API_URL
+        sync: false
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /index.html
+        name: Cache-Control
+        value: no-store
+      - path: /release.json
+        name: Cache-Control
+        value: no-store
+      - path: /*
+        name: Content-Security-Policy
+        value:
+          default-src 'self'; script-src 'self'; style-src 'self'; connect-src
+          'self' https:; img-src 'self' data:; frame-ancestors 'none'; base-uri
+          'none'; object-src 'none'; form-action 'self'
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+  - type: web
+    name: servicetones-stagging-api
+    runtime: node
+    plan: starter
+    region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
     branch: stagging
     autoDeployTrigger: off
-    buildCommand: npm ci --include=dev && npm run build
-    startCommand: npm start
+    buildCommand: npm ci --include=dev
+    startCommand: npm run start:api
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-stagging
-      - key: DATABASE_URL
+      - fromGroup: servicetones-stagging-api
+      - &a2
+        key: DATABASE_URL
         fromDatabase:
           name: servicetones-stagging-db
           property: connectionString
@@ -54,30 +123,96 @@ services:
     runtime: node
     plan: starter
     region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
     branch: stagging
     autoDeployTrigger: off
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-stagging
-      - key: DATABASE_URL
-        fromDatabase:
-          name: servicetones-stagging-db
-          property: connectionString
+      - fromGroup: servicetones-stagging-api
+      - *a2
   - type: web
-    name: servicetones-production
+    name: servicetones-stagging-web
     runtime: node
     plan: starter
     region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
+    branch: stagging
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build:web
+    startCommand: npm run start:web
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: stagging
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: SITE_URL
+        sync: false
+      - key: API_URL
+        sync: false
+  - type: web
+    name: servicetones-stagging-admin
+    runtime: static
+    repo: https://github.com/shahsmit2425/servicetones
+    branch: stagging
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build:admin
+    staticPublishPath: dist/admin
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: VITE_APP_ENV
+        value: stagging
+      - key: VITE_API_URL
+        sync: false
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /index.html
+        name: Cache-Control
+        value: no-store
+      - path: /release.json
+        name: Cache-Control
+        value: no-store
+      - path: /*
+        name: Content-Security-Policy
+        value:
+          default-src 'self'; script-src 'self'; style-src 'self'; connect-src
+          'self' https:; img-src 'self' data:; frame-ancestors 'none'; base-uri
+          'none'; object-src 'none'; form-action 'self'
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+  - type: web
+    name: servicetones-production-api
+    runtime: node
+    plan: starter
+    region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
     branch: main
     autoDeployTrigger: off
-    buildCommand: npm ci --include=dev && npm run build
-    startCommand: npm start
+    buildCommand: npm ci --include=dev
+    startCommand: npm run start:api
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-production
-      - key: DATABASE_URL
+      - fromGroup: servicetones-production-api
+      - &a3
+        key: DATABASE_URL
         fromDatabase:
           name: servicetones-production-db
           property: connectionString
@@ -86,16 +221,80 @@ services:
     runtime: node
     plan: starter
     region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
     branch: main
     autoDeployTrigger: off
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: servicetones-production-db
-          property: connectionString
+      - fromGroup: servicetones-production-api
+      - *a3
+  - type: web
+    name: servicetones-production-web
+    runtime: node
+    plan: starter
+    region: ohio
+    repo: https://github.com/shahsmit2425/servicetones
+    branch: main
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build:web
+    startCommand: npm run start:web
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: SITE_URL
+        sync: false
+      - key: API_URL
+        sync: false
+  - type: web
+    name: servicetones-production-admin
+    runtime: static
+    repo: https://github.com/shahsmit2425/servicetones
+    branch: main
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build:admin
+    staticPublishPath: dist/admin
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: VITE_APP_ENV
+        value: production
+      - key: VITE_API_URL
+        sync: false
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /index.html
+        name: Cache-Control
+        value: no-store
+      - path: /release.json
+        name: Cache-Control
+        value: no-store
+      - path: /*
+        name: Content-Security-Policy
+        value:
+          default-src 'self'; script-src 'self'; style-src 'self'; connect-src
+          'self' https:; img-src 'self' data:; frame-ancestors 'none'; base-uri
+          'none'; object-src 'none'; form-action 'self'
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
 databases:
   - name: servicetones-development-db
     plan: basic-256mb
@@ -116,7 +315,7 @@ databases:
     user: servicetones
     ipAllowList: []
 envVarGroups:
-  - name: servicetones-development
+  - name: servicetones-development-api
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -129,10 +328,10 @@ envVarGroups:
       - key: SMTP_HOST
         value: smtp.office365.com
       - key: SMTP_PORT
-        value: 587
+        value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
-        value: 10
-  - name: servicetones-stagging
+        value: "10"
+  - name: servicetones-stagging-api
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -145,10 +344,10 @@ envVarGroups:
       - key: SMTP_HOST
         value: smtp.office365.com
       - key: SMTP_PORT
-        value: 587
+        value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
-        value: 10
-  - name: servicetones-production
+        value: "10"
+  - name: servicetones-production-api
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -161,6 +360,6 @@ envVarGroups:
       - key: SMTP_HOST
         value: smtp.office365.com
       - key: SMTP_PORT
-        value: 587
+        value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
-        value: 10
+        value: "10"

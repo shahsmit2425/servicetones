@@ -3,11 +3,15 @@
 ## Source layout
 
 ```text
+apps/
+  web/server.ts            Customer/pro website SSR process; calls public API, no database credentials
+  admin/                   Independent static admin app, sign-in, TOTP and administration screens
+  api/server.ts            Dedicated backend process entry point
 src/
   shared/                  Types, Zod validation, lifecycle permissions, public config contract
   client/
     workspace.tsx          Authenticated shell, routing, account lifecycle, refresh/error handling
-    pages.tsx              Customer/provider/admin workspace screens
+    pages.tsx              Customer/provider workspace screens
     auth.ts                Firebase web auth + native Google/Apple credentials
     api.ts                 Bearer-token API client and native external-browser handling
     ui.tsx                 Shared accessible UI primitives
@@ -16,7 +20,7 @@ src/
   entry-server.tsx          SEO rendering, metadata, safe JSON serialization
   styles.css               Shared responsive styles, readable colors and type
   server/
-    index.ts               HTTP server, SSR, CORS, security headers, health/SEO routes
+    index.ts               API HTTP server, CORS, security headers and API routes
     api.ts                 Authenticated API and integration endpoints
     projects.ts            Transactional project commands
     repository.ts          Role-scoped database reads, audit and notification outbox
@@ -36,7 +40,7 @@ render.yaml                Three isolated web/worker/Postgres environments
 
 ## Data and authorization
 
-Firebase proves identity. Every API request verifies the ID token, checks revocation and verified email, and loads the user's role from PostgreSQL. Registration accepts only customer or professional; an administrator must also possess a Firebase admin claim. URL changes never change account permissions.
+Firebase proves identity. Every API request verifies the ID token, checks revocation and verified email, and loads the user's role from PostgreSQL. Registration accepts only customer or professional; an administrator additionally needs an approved UID, Firebase admin claim, database admin role, TOTP-authenticated token and authentication within the last hour. Public signup cannot create administrators. URL changes never change account permissions.
 
 PostgreSQL stores users, profiles, projects, estimates, messages, payments, reviews, support tickets, notifications, blocked/saved relationships, private file references, audit events, webhook receipts and the email outbox. Migrations contain no INSERT statements for marketplace data. The legacy SQLite/localStorage preview is not loaded, migrated, or served.
 
@@ -58,7 +62,7 @@ The UI refreshes current data every ten seconds and on focus. This keeps web/mob
 
 ## Environment model
 
-All branches contain identical environment-independent application code after promotion. Runtime values come from Render groups. Web clients receive only the explicitly allowlisted `/api/config` fields. Mobile builds obtain that public config from the matching deployed SHA and bundle it with the same source commit. Private keys are never embedded in JavaScript.
+All branches contain identical environment-independent application code after promotion. Runtime values come from Render groups. Web clients receive only the explicitly allowlisted `/api/config` fields. Mobile builds obtain that public config from the matching environment API and bundle it with the same source commit. Private keys are never embedded in JavaScript.
 
 Native app code updates still require new signed builds and installation through the relevant store/test channel. Backend and website changes become available after Render deployment. There is no unsafe remote-code hot-patch mechanism.
 
@@ -67,3 +71,9 @@ Native app code updates still require new signed builds and installation through
 Public landing, six service pages and verified professional profiles are server-rendered HTML with titles, descriptions, canonical links, Open Graph and JSON-LD. Sitemap URLs include real public profiles only. Non-production environments and private application routes are noindex; missing pages return 404. Do not treat robots directives as an access-control boundary.
 
 The shared stylesheet uses dark headings and readable body colors, responsive navigation, visible focus outlines, form labels, status/error announcements, and reduced-motion support. No synthetic ratings, job counts or customer testimonials are displayed.
+
+## Independent deployment graph
+
+`apps/admin` edits deploy only the admin site. Customer client edits deploy web/mobile. API edits deploy the API, and worker dependencies also deploy the mail worker. Shared contracts or dependency/configuration changes deploy all affected apps. Database migrations run only on API releases. A documentation-only push deploys nothing. GitHub validation still checks the entire repository.
+
+The API is a separately versioned compatible service: UI-only releases need not share its commit SHA. Breaking contracts require an expand/migrate/contract rollout; support installed native clients when retiring endpoints.

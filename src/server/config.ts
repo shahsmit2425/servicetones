@@ -2,6 +2,8 @@ import "dotenv/config";
 import { z } from "zod";
 import type { PublicConfig } from "../shared/config.js";
 const envSchema = z.object({
+  API_URL: z.string().default("http://127.0.0.1:3001"),
+  ADMIN_ALLOWED_UIDS: z.string().default(""),
   APP_ENV: z
     .enum(["development", "stagging", "production"])
     .default("development"),
@@ -25,7 +27,7 @@ const envSchema = z.object({
   ALLOWED_ORIGINS: z
     .string()
     .default(
-      "http://127.0.0.1:5173,http://localhost:5173,capacitor://localhost,https://localhost",
+      "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:5174,capacitor://localhost,https://localhost",
     ),
   UPSTASH_REDIS_REST_URL: z.string().default(""),
   UPSTASH_REDIS_REST_TOKEN: z.string().default(""),
@@ -55,7 +57,7 @@ export const env = envSchema.parse(process.env);
 export const publicConfig: PublicConfig = {
   environment: env.APP_ENV,
   siteUrl: env.SITE_URL.replace(/\/$/, ""),
-  apiUrl: "",
+  apiUrl: env.API_URL.replace(/\/$/, ""),
   firebase: {
     apiKey: env.FIREBASE_WEB_API_KEY,
     authDomain: env.FIREBASE_AUTH_DOMAIN,
@@ -96,6 +98,8 @@ export function requiredKeys() {
   ] as const;
 }
 export function validateDeployment() {
+  if (!env.API_URL.startsWith("https://"))
+    throw new Error("API_URL must be HTTPS");
   const missing = requiredKeys().filter((k) => !env[k]);
   if (missing.length)
     throw new Error("Missing deployment configuration: " + missing.join(", "));

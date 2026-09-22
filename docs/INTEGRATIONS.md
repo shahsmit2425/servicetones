@@ -12,7 +12,7 @@ New profiles choose customer or professional once; the API stores the role. To c
 
 Enable Connect Express and Identity. Each professional saves their profile, completes Stripe-hosted document/selfie verification, then completes Connect payout onboarding. Document verification is not a background check, license check, insurance certification, or guarantee of workmanship.
 
-Create a webhook destination at `https://YOUR_SITE/api/webhooks/stripe`. Subscribe to Identity verification events, platform Checkout completion/async success, and charge refunds. Connect `account.updated` delivery must also be configured; if Stripe gives you a separate connected-account destination secret, use `/api/webhooks/stripe-connect` and `STRIPE_CONNECT_WEBHOOK_SECRET` for that destination. Enable test-mode events in non-production and live events only in production.
+Create a webhook destination at `https://YOUR_API_DOMAIN/api/webhooks/stripe`. Subscribe to Identity verification events, platform Checkout completion/async success, and charge refunds. Create a separate connected-account destination for `account.updated` at `/api/webhooks/stripe-connect`, with `STRIPE_CONNECT_WEBHOOK_SECRET`. Use the API domain for both destinations and test-mode events in non-production; enable live events only in production.
 
 Stripe Checkout charges the customer after completion, applies the configured platform fee, and sends the remainder to the professional's connected account. Review the fee and Stripe/platform liability arrangement before launch. Client redirects are informational: the webhook remains authoritative.
 

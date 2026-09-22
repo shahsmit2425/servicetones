@@ -111,13 +111,7 @@ const navigation = {
     ["availability", "Availability"],
     ["reviews", "Reviews"],
   ],
-  admin: [
-    ["dashboard", "Platform overview"],
-    ["people", "Professionals"],
-    ["projects", "All projects"],
-    ["reports", "Support & disputes"],
-    ["payments", "Transactions"],
-  ],
+  admin: [],
 };
 export default function Workspace() {
   const [route, setRoute] = useState(readRoute),
@@ -144,6 +138,8 @@ export default function Workspace() {
   async function load() {
     try {
       const result = await request<Data>("/workspace");
+      if (result.user.role === "admin")
+        throw new Error("Use the separate administrator application.");
       setData(result);
       setNeedsAccount(false);
     } catch (e) {
@@ -437,11 +433,7 @@ export default function Workspace() {
     <>
       <Brand />
       <p className="workspace-label">
-        {data.user.role === "pro"
-          ? "YOUR BUSINESS"
-          : data.user.role === "admin"
-            ? "PLATFORM OPERATIONS"
-            : "YOUR HOME, ORGANIZED"}
+        {data.user.role === "pro" ? "YOUR BUSINESS" : "YOUR HOME, ORGANIZED"}
       </p>
       <nav aria-label="Workspace navigation">
         {links.map(([p, label]) => {
@@ -463,11 +455,7 @@ export default function Workspace() {
         <div>
           <strong>{data.user.name}</strong>
           <small>
-            {data.user.role === "pro"
-              ? "Professional"
-              : data.user.role === "admin"
-                ? "Administrator"
-                : "Customer"}
+            {data.user.role === "pro" ? "Professional" : "Customer"}
           </small>
         </div>
         <button
@@ -502,12 +490,7 @@ export default function Workspace() {
               <Menu />
             </button>
             <span>
-              {data.user.role === "pro"
-                ? "Provider"
-                : data.user.role === "admin"
-                  ? "Admin"
-                  : "Customer"}{" "}
-              workspace{" "}
+              {data.user.role === "pro" ? "Provider" : "Customer"} workspace{" "}
               <b>
                 /{" "}
                 {links.find((l) => l[0] === route.page)?.[1] ||

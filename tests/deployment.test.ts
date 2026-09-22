@@ -10,14 +10,19 @@ test("three branches map to isolated environments and mobile application identif
 });
 test("Render services cannot auto-deploy another environment", () => {
   const b = parse(readFileSync("render.yaml", "utf8"));
-  assert.equal(b.services.length, 6);
+  assert.equal(b.services.length, 12);
   assert.equal(b.databases.length, 3);
   for (const s of b.services) {
     assert.equal(s.autoDeployTrigger, "off");
     const target = mapping[s.branch as keyof typeof mapping];
     assert.ok(target);
     assert.ok(s.name.includes(target.environment));
-    assert.equal(s.envVars[0].fromGroup, "servicetones-" + target.environment);
+    if (s.name.endsWith("-api") || s.name.endsWith("-mail"))
+      assert.equal(
+        s.envVars[0].fromGroup,
+        "servicetones-" + target.environment + "-api",
+      );
+    else assert.ok(s.envVars.every((v: any) => !v.fromGroup));
   }
 });
 test("promotion guard rejects direct development-to-main changes", () => {

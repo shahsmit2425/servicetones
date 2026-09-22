@@ -7,9 +7,9 @@
     "node": ">=22.13.0 <23"
   },
   "scripts": {
-    "dev": "tsx watch src/server/index.ts",
-    "build": "npm run typecheck && vite build && vite build --ssr src/entry-server.tsx --outDir dist/server",
-    "start": "tsx src/server/index.ts",
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build:web && npm run build:admin",
+    "start": "npm run start:web",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:integration": "tsx --test tests/database.test.ts",
@@ -18,9 +18,17 @@
     "worker": "tsx src/server/worker.ts",
     "config:check": "tsx scripts/check-config.ts",
     "mobile:prepare": "tsx scripts/prepare-mobile.ts",
-    "mobile:sync": "npm run build && npm run mobile:prepare && cap sync",
+    "mobile:sync": "npm run build:web && npm run mobile:prepare && npx cap sync",
     "mobile:ios": "cap open ios",
-    "mobile:android": "cap open android"
+    "mobile:android": "cap open android",
+    "dev:web": "tsx watch apps/web/server.ts",
+    "dev:api": "tsx watch apps/api/server.ts",
+    "dev:admin": "vite --config apps/admin/vite.config.ts",
+    "build:web": "npm run typecheck && vite build && vite build --ssr src/entry-server.tsx --outDir dist/server",
+    "build:admin": "vite build --config apps/admin/vite.config.ts && node scripts/admin-build-stamp.mjs",
+    "start:web": "tsx apps/web/server.ts",
+    "start:api": "tsx apps/api/server.ts",
+    "admin:access": "tsx scripts/admin-access.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",

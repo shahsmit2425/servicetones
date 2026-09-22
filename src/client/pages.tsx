@@ -35,7 +35,6 @@ export function Pages() {
       return <Dashboard />;
     case "discover":
     case "saved":
-    case "people":
       return <Directory />;
     case "projects":
     case "leads":
@@ -62,7 +61,6 @@ export function Pages() {
     case "settings":
       return <Settings />;
     case "help":
-    case "reports":
       return <Support />;
     default:
       return (
@@ -109,44 +107,28 @@ function BriefcaseIcon({ category }: { category: string }) {
 }
 function Dashboard() {
   const { data, go } = useWorkspace();
-  const pro = data.user.role === "pro",
-    admin = data.user.role === "admin";
+  const pro = data.user.role === "pro";
   const active = data.projects.filter(
     (p) => !["completed", "cancelled"].includes(p.status),
   );
   return (
     <>
       <Head
-        title={
-          admin
-            ? "A pulse on your marketplace."
-            : "Welcome back, " + data.user.name.split(" ")[0] + "."
-        }
+        title={"Welcome back, " + data.user.name.split(" ")[0] + "."}
         action={
-          <button
-            onClick={() => go(admin ? "reports" : pro ? "leads" : "projects")}
-          >
+          <button onClick={() => go(pro ? "leads" : "projects")}>
             <Plus size={17} />
-            {admin
-              ? "Review support cases"
-              : pro
-                ? "Find opportunities"
-                : "Start a project"}
+            {pro ? "Find opportunities" : "Start a project"}
           </button>
         }
       >
-        {admin
-          ? "Help every project move forward."
-          : pro
-            ? "Your projects, conversations, and business in one place."
-            : "Your home projects, all coming together."}
+        {pro
+          ? "Your projects, conversations, and business in one place."
+          : "Your home projects, all coming together."}
       </Head>
       <div className="stats">
         {[
-          [
-            admin ? "Total projects" : "Active projects",
-            admin ? data.projects.length : active.length,
-          ],
+          ["Active projects", active.length],
           [
             "Estimates",
             data.quotes.filter((q) => q.status === "pending").length,
@@ -186,14 +168,8 @@ function Dashboard() {
               ? "Keep your profile complete and make the next connection count."
               : "From quick fixes to fresh starts, find your next go-to professional."}
           </p>
-          <button
-            onClick={() => go(pro ? "profile" : admin ? "people" : "discover")}
-          >
-            {pro
-              ? "Your business profile"
-              : admin
-                ? "Manage professionals"
-                : "Find the right pro"}
+          <button onClick={() => go(pro ? "profile" : "discover")}>
+            {pro ? "Your business profile" : "Find the right pro"}
             <ArrowUpRight size={16} />
           </button>
         </div>
@@ -339,21 +315,7 @@ function Directory() {
                 <Badge>{p.zip}</Badge>
               </div>
               <div className="actions">
-                {data.user.role === "admin" ? (
-                  <button
-                    className="secondary"
-                    disabled={busy}
-                    onClick={() =>
-                      void run(() =>
-                        request("/admin/profiles/" + p.id, {
-                          suspended: !p.suspended,
-                        }),
-                      )
-                    }
-                  >
-                    {p.suspended ? "Restore listing" : "Suspend listing"}
-                  </button>
-                ) : data.user.role === "customer" ? (
+                {data.user.role === "customer" ? (
                   <>
                     <button
                       disabled={!p.available}
@@ -897,9 +859,7 @@ function Schedule() {
 }
 function Messages() {
   const { data, id, go, run, busy } = useWorkspace();
-  const threads = data.projects.filter(
-    (p) => p.proId && data.user.role !== "admin",
-  );
+  const threads = data.projects.filter((p) => p.proId);
   const p = threads.find((p) => p.id === id) || threads[0];
   const [draft, setDraft] = useState("");
   const other = p
@@ -1540,38 +1500,6 @@ function Support() {
               <h3>{t.subject}</h3>
               <p>{t.body}</p>
               {t.resolution && <blockquote>{t.resolution}</blockquote>}
-              {data.user.role === "admin" && t.status === "open" && (
-                <Form
-                  busy={busy}
-                  onSubmit={(f) =>
-                    run(
-                      () =>
-                        request("/admin/tickets/" + t.id, {
-                          resolution: f.get("resolution"),
-                          refund: f.get("refund") === "on",
-                        }),
-                      "Case resolved.",
-                    )
-                  }
-                >
-                  <Field label="Resolution">
-                    <textarea
-                      name="resolution"
-                      required
-                      minLength={10}
-                      maxLength={3000}
-                    />
-                  </Field>
-                  {t.projectId && (
-                    <label className="checkbox">
-                      <input type="checkbox" name="refund" />
-                      Issue a full refund and reverse the professional’s
-                      transfer
-                    </label>
-                  )}
-                  <button>Resolve case</button>
-                </Form>
-              )}
             </article>
           ))
         ) : (

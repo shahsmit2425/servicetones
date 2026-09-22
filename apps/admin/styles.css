@@ -1,0 +1,163 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #18283e;
+  background: #f3f6fa;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 24px 5%;
+  background: #152f50;
+  color: white;
+}
+header span {
+  font-weight: 400;
+}
+header small {
+  margin-left: auto;
+}
+main {
+  max-width: 1120px;
+  margin: 40px auto;
+  padding: 0 24px;
+  min-height: 75vh;
+}
+h1 {
+  font-size: 32px;
+  letter-spacing: -1px;
+}
+h2 {
+  font-size: 20px;
+}
+p {
+  line-height: 1.65;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button {
+  border: 1px solid #b8c6d8;
+  background: white;
+  color: #17365e;
+  border-radius: 8px;
+  padding: 11px 18px;
+  cursor: pointer;
+}
+button:hover,
+button[aria-current] {
+  background: #163f70;
+  color: white;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #267ade;
+  outline-offset: 3px;
+}
+label {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  font-weight: 600;
+}
+input,
+textarea {
+  padding: 12px;
+  border: 1px solid #8c9bad;
+  border-radius: 7px;
+  width: 100%;
+}
+.check {
+  display: flex;
+  align-items: center;
+}
+.check input {
+  width: auto;
+}
+nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+article,
+.login {
+  background: white;
+  border: 1px solid #d7e0eb;
+  border-radius: 14px;
+  padding: 26px;
+}
+.login {
+  max-width: 470px;
+  margin: 60px auto;
+}
+.login button {
+  background: #174f89;
+  color: white;
+}
+.records,
+.metrics {
+  display: grid;
+  gap: 18px;
+}
+.metrics {
+  grid-template-columns: repeat(3, 1fr);
+}
+.metrics strong {
+  font-size: 36px;
+}
+.metrics > p {
+  grid-column: 1/-1;
+}
+.error {
+  padding: 16px;
+  background: #fff0f0;
+  border: 1px solid #cd8282;
+  color: #8a1b1b;
+  border-radius: 8px;
+}
+.secret {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 14px;
+  background: #f1f5fa;
+}
+footer {
+  text-align: center;
+  padding: 24px;
+  color: #526277;
+}
+small {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  header {
+    flex-wrap: wrap;
+    padding: 18px;
+  }
+  header small {
+    margin-left: 0;
+  }
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+  main {
+    padding: 0 16px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+}

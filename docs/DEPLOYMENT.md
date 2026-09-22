@@ -8,31 +8,52 @@ A development push only selects the development GitHub environment and its Rende
 
 Require the `Validate` check on promotion branches, disallow force pushes/deletions, and require pull requests. GitHub plan/permissions determine whether repository branch protections can be enabled. Configure these repository settings if they are not already applied. A workflow by itself cannot stop an administrator from bypassing repository controls.
 
-## First-time Render setup
+## Separate services in each environment
 
-1. Connect this GitHub repository to Render.
-2. Create a Blueprint from `render.yaml`. It defines three web services, three email workers and three Postgres databases. These use paid plans; inspect Render's resource/cost summary before applying.
-3. Populate each environment group with its own values from [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md). The Blueprint provides non-secret defaults; secrets are deliberately entered manually in environment groups because Render does not support `sync: false` there.
-4. Leave service auto deploy **off**. The GitHub workflow owns deployment timing. The web pre-deploy command validates configuration and runs migrations. The worker is deployed afterward.
-5. Each Render web service provides an actual `https://...onrender.com` URL. Put that exact URL in its `SITE_URL` initially; do not assume a hostname based on the service name. Update it after configuring a custom domain.
-6. In GitHub, create environments `development`, `stagging`, and `production`. Add the per-environment variables and secrets below.
-7. Run the workflow on `development` after credentials are entered. It checks the Render service's linked branch, deploys the validated commit SHA, waits for the deployment, checks release/environment via `/api/health`, and then deploys the mail worker.
-8. Test the development environment before promoting to staging and production.
+| Service | Render type | Build | Start / publish |
+| --- | --- | --- | --- |
+| Customer/pro website | Web Service, Node | npm ci --include=dev && npm run build:web | npm run start:web |
+| Admin website | Static Site | npm ci --include=dev && npm run build:admin | dist/admin |
+| Backend API | Web Service, Node | npm ci --include=dev | npm run start:api |
+| PostgreSQL | Managed PostgreSQL | — | — |
+| Mail delivery | Background Worker, Node | npm ci --include=dev | npm run worker |
 
-No external database migration/import from the old local SQLite store runs. Keep a copy of any real historical data and plan an explicit migration separately if needed.
+All repository root-directory fields stay blank. Select the environment's branch on **every service**. Set Auto-Deploy to **Off**; GitHub Actions owns deployment. The API pre-deploy command is `npm run config:check && npm run db:migrate`. Health paths are `/api/health` for API and `/health` for web. Admin publishes a nonsecret `/release.json` for deployment verification.
 
-## GitHub configuration
+## First-time development setup
 
-Each environment needs these **variables**:
+1. Create the development PostgreSQL database and the three application services plus mail worker above. Keep Node services/database in the same region. Alternatively apply `render.yaml` as a Blueprint; it creates **all three environments with paid web/API/worker/database plans**, so review its cost summary first.
+2. Record the assigned customer, API and admin HTTPS domains. The examples dev.yourdomain.com, api-dev.yourdomain.com and admin-dev.yourdomain.com are placeholders, not provisioned domains.
+3. Create group `servicetones-development-api` and link it only to API and worker. Enter the private provider variables from [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md), including API_URL and SITE_URL. Connect both services to the development database. Blueprint injects DATABASE_URL; manual setup must use its internal URL. Set DATABASE_SSL=render-internal.
+4. Set the customer web service's own NODE_ENV=production, APP_ENV=development, NODE_VERSION=22.16.0, SITE_URL and API_URL. It needs **no** database or provider private keys.
+5. Set the admin static site's own NODE_VERSION=22.16.0, VITE_APP_ENV=development and VITE_API_URL to the API origin. Link **no backend environment group**. For manual static setup, copy the security headers and fallback rewrite from render.yaml; the build output is dist/admin, not dist/client.
+6. Add customer/admin origins to API ALLOWED_ORIGINS and Firebase authorized domains. Keep capacitor://localhost and https://localhost for mobile. Stripe webhook destinations use the **API domain**; return links use the customer SITE_URL.
+7. Populate the development GitHub Environment below, then manually run the release workflow on development. A manual run deploys all components; normal pushes select only affected components. Deployments occur API → worker → web → admin when selected. Each selected service must report the exact deployed SHA and environment (worker has no HTTP endpoint).
+8. Provision your administrator using [ADMIN_SECURITY.md](ADMIN_SECURITY.md). Enable Firebase Identity Platform TOTP, approve the UID, provision its database role/custom claim, enroll MFA and sign in again. No administrator exists by default.
+9. Test the development flows before promoting code to stagging and main. Repeat setup with isolated credentials and separate resources for each environment.
+
+If you already created the old combined service, reuse it as the **API** only after changing its start/build commands. Create the separate web/admin services, move customer SITE_URL to the new web domain, update native API_URL/Firebase/Stripe/CORS settings and GitHub service IDs, then redeploy. Do not attach the existing secret-bearing group to either frontend. Existing real database data is retained; no schema reset is part of this refactor.
+
+## GitHub configuration and selective deployment
+
+Each GitHub Environment (development, stagging, production) needs these variables:
 
 | Name | Value |
 | --- | --- |
-| SITE_URL | Actual HTTPS URL for this environment |
-| RENDER_SERVICE_ID | Its web service ID, `srv-...` |
-| RENDER_WORKER_SERVICE_ID | Its email-worker service ID |
-| MOBILE_RELEASES_ENABLED | `true` once native signing and store entries are configured |
+| SITE_URL | Customer website HTTPS origin |
+| API_URL | Backend HTTPS origin, without /api |
+| ADMIN_URL | Admin static site's HTTPS origin |
+| RENDER_WEB_SERVICE_ID | Customer web service ID |
+| RENDER_API_SERVICE_ID | Backend API service ID |
+| RENDER_ADMIN_SERVICE_ID | Admin static site ID |
+| RENDER_WORKER_SERVICE_ID | Mail worker ID |
+| MOBILE_RELEASES_ENABLED | true after signing and store setup |
 
-Each environment needs `RENDER_API_KEY` as a **secret**. Use an account with access to the intended services; keep IDs environment-scoped. Do not put Render deploy credentials in the app's public config.
+Store RENDER_API_KEY as a secret. RENDER_SERVICE_ID from the old combined setup is no longer used.
+
+`apps/admin/**` changes deploy admin only. `src/client/**` changes deploy customer web and mobile. Backend changes deploy API; shared worker dependencies deploy worker too. Shared contracts/dependencies/configuration fan out to affected apps. Documentation-only pushes deploy nothing. Validation still tests/builds all apps.
+
+Push selection compares the complete push range (including promotion merge commits). If a component deployment fails, rerun that failed workflow before advancing it; a later unrelated push intentionally does not deploy the failed component. Workflow dispatch provides a full redeploy/recovery path. Keep backend contracts compatible with independently released websites and already-installed mobile versions. Use additive migrations first, then retire old contracts only after clients migrate.
 
 The following **GitHub secrets** are also required for native releases. They cannot be replaced by Render runtime variables because Xcode and Android signing run on GitHub runners.
 
@@ -68,9 +89,9 @@ Create matching iOS App Store Connect records and internal TestFlight tester gro
 
 ## Cloudflare domains
 
-Suggested names are `dev.yourdomain.com`, `staging.yourdomain.com`, and your production domain. Add each custom domain in the matching Render web service, then create its DNS record in Cloudflare using the exact target Render supplies. Complete certificate validation, use Full (strict) TLS, and avoid caching `/api/*` or `/app/*`. Never cache responses containing user data.
+Suggested names are `dev.yourdomain.com`, `staging.yourdomain.com`, and your production domain. Add each custom domain in the matching Render web service, then create its DNS record in Cloudflare using the exact target Render supplies. Complete certificate validation, use Full (strict) TLS, and avoid caching API responses or authenticated pages. Never cache responses containing user data.
 
-Update `SITE_URL`, `ALLOWED_ORIGINS`, Firebase authorized domains, Stripe webhook endpoints and GitHub environment `SITE_URL`. Rebuild native apps if their API URL changes. The repository does not require a Cloudflare global API key for DNS; R2 uses a separate bucket-scoped credential.
+Update `SITE_URL`, `ALLOWED_ORIGINS`, Firebase authorized domains, Stripe webhook endpoints and GitHub environment SITE_URL/API_URL/ADMIN_URL. Rebuild native apps if their API URL changes. The repository does not require a Cloudflare global API key for DNS; R2 uses a separate bucket-scoped credential.
 
 ## Configuration changes and rollback
 

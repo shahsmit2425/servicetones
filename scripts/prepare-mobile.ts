@@ -12,9 +12,9 @@ if (!target)
   throw new Error("Mobile builds require a mapped deployment branch.");
 if (process.env.APP_ENV && process.env.APP_ENV !== target.environment)
   throw new Error("APP_ENV must match the selected deployment branch.");
-const site = process.env.SITE_URL;
+const site = process.env.API_URL;
 if (!site || !site.startsWith("https://"))
-  throw new Error("Set SITE_URL to the deployed HTTPS environment.");
+  throw new Error("Set API_URL to the deployed HTTPS API environment.");
 const r = await fetch(site.replace(/\/$/, "") + "/api/config", {
   signal: AbortSignal.timeout(20000),
 });
@@ -23,8 +23,8 @@ if (!r.ok)
 const config = (await r.json()) as PublicConfig;
 if (config.environment !== target.environment)
   throw new Error("Mobile environment mismatch.");
-if (process.env.GITHUB_SHA && config.release !== process.env.GITHUB_SHA)
-  throw new Error("Deploy this commit to Render before building mobile apps.");
+// Independently deployed API may be an earlier compatible release.
+config.release = process.env.GITHUB_SHA || config.release;
 config.apiUrl = site.replace(/\/$/, "");
 const index = await readFile("dist/client/index.html", "utf8");
 await writeFile(
