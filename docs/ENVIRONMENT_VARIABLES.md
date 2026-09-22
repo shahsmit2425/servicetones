@@ -69,7 +69,7 @@ Use a distinct database per environment. Rate-limit keys are additionally prefix
 
 Checkout is Stripe-hosted, so there is no browser publishable key in this implementation. Enable Stripe Identity and Connect in the account. Identity and Connect serve different purposes; both are required for professional onboarding.
 
-Register these webhook events: `identity.verification_session.verified`, `identity.verification_session.requires_input`, `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`. Configure delivery of connected-account `account.updated` events to the same endpoint with its signing secret, or use the separate Connect webhook endpoint/secret described in the integration guide if Stripe creates a separate destination.
+Register `identity.verification_session.verified`, `identity.verification_session.requires_input`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `charge.refunded` at `/api/webhooks/stripe`. Configure a separate connected-account destination for `account.updated` at `/api/webhooks/stripe-connect`, with its own `STRIPE_CONNECT_WEBHOOK_SECRET`.
 
 ## Daily calls
 
