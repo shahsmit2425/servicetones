@@ -1,0 +1,20 @@
+{
+  "development": {
+    "environment": "development",
+    "appId": "com.servicetones.app.dev",
+    "appName": "ServiceTones Dev",
+    "androidTrack": "internal"
+  },
+  "stagging": {
+    "environment": "stagging",
+    "appId": "com.servicetones.app.staging",
+    "appName": "ServiceTones Staging",
+    "androidTrack": "internal"
+  },
+  "main": {
+    "environment": "production",
+    "appId": "com.servicetones.app",
+    "appName": "ServiceTones",
+    "androidTrack": "production"
+  }
+}

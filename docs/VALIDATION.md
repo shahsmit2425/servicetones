@@ -1,18 +1,29 @@
-# Validation
+# Validation and launch status
 
-Automated checks exercised real HTTP endpoints and authenticated Socket.IO clients:
+## Checked locally
 
-- Signup validation, strong password length, login failure, session authentication.
-- Public professional listing excludes passwords.
-- Projects visible only to their customer and assigned professional.
-- Customers cannot accept work; pros cannot complete before acceptance; completed work cannot be cancelled.
-- Conversation creation is idempotent and outsiders cannot read or send messages.
-- Whitespace-only messages are rejected; valid messages are delivered live and returned in history.
-- Call invitations require membership, only the recipient can accept, and media signaling is rejected before acceptance and after ending.
-- Logout revokes the HTTP session and disconnects its sockets.
+- TypeScript strict compilation.
+- Client production build and React server-rendering bundle.
+- 15 automated tests: lifecycle permissions, registration/verification privilege boundaries, integer payment validation, date validation, private membership, SQL constraints, empty schema, role-scoped reads, signed/idempotent webhooks, SEO rendering/escaping, environment mapping and promotion guards.
+- Database tests use PGlite, an embedded PostgreSQL engine, with isolated synthetic fixtures. They do not seed the application or contact real service accounts.
+- Capacitor copies the shared bundle and discovers the Firebase Authentication and Browser plugins for Android/iOS.
+- Dependency audit: zero reported vulnerabilities after updating the server/auth/mail tooling and Vite. The targeted gaxios → uuid override applies the patched UUID implementation to Firebase Admin's optional storage dependency.
+- Browser smoke check: responsive public homepage and the configuration-aware authentication screen render without console errors. Unauthenticated workspace requests return 401; public config exposes only the documented allowlist.
 
-`npm run build` runs TypeScript and the Vite production build. `npx cap sync` copies the bundle into Android and iOS projects.
+The GitHub validation job also compiles the Android debug app. Native distribution uses Java 21 / Android API 36 and an Xcode 26-or-later check. Store policy and SDK requirements must be rechecked as platforms evolve.
 
-Browser checks covered desktop/mobile layouts, service search, input rejection for the WebMCP search tool, and the sample-profile disclosure. The native platform folders have been generated and synced; APK/IPA compilation, signing, physical-device microphone/camera behavior, actual two-device media exchange, TURN relay traversal, and App Store/Play Store submission are not verified in this Windows environment.
+## Requires external credentials and devices
 
-To test real communications locally, register one customer and one pro using separate browser sessions. Find the registered pro from the customer session, open a conversation, send a message, and call with the other session open. Accept microphone/camera permission yourself, verify both directions, then test decline, cancel, mute, camera toggle, logout and dropped-network recovery. Use headphones to prevent feedback. A localhost session on each device is not the same server; cross-device tests require a shared HTTPS server.
+Render deployment, managed Postgres TLS/migrations, Firebase/Google/Apple authentication, Stripe Identity/Connect/Checkout/refunds, Microsoft 365 SMTP delivery, Daily calls, Maps geocoding, R2 storage, Upstash and Sentry must be exercised with their actual service configuration.
+
+Windows cannot perform an Xcode archive. No signed iOS archive, Android release bundle, TestFlight upload, or Google Play upload has been validated locally. CI is configured to do those steps after the required credentials exist.
+
+## Before a public launch
+
+Publish actual business terms/privacy/retention and support contact details in place of the informational pages. Complete App Store privacy/export-compliance declarations, Play Data Safety, tester setup, and the account-deletion process required by your distribution policy. Account/data deletion currently routes to a support case rather than an automated erasure pipeline.
+
+Verify webhook destinations and replay behavior in Stripe test mode; confirm professional payout readiness. Test login, a full project-to-payment flow, private chat and a two-person call on both real mobile platforms. Monitor failed email-outbox attempts. Add operational retention/scanning policies for files according to your service requirements.
+
+Current design limits: US ZIP-based location, USD-only pricing, one primary service category per professional, full refunds only, availability preferences rather than conflict-free scheduling, capped workspace histories (500 projects/1000 messages), polling rather than push, and foreground calls without native incoming-call ringing. These are explicit product boundaries, not simulated success paths.
+
+References: [Android target API requirements](https://developer.android.com/google/play/requirements/target-sdk), [Apple SDK requirements](https://developer.apple.com/news/upcoming-requirements/?id=04282026a).

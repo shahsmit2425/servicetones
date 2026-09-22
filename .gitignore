@@ -53,3 +53,10 @@ next-env.d.ts
 *.jks
 *.keystore
 *.mobileprovision
+*.p12
+*.p8
+GoogleService-Info.plist
+google-services.json
+/artifacts/
+/fastlane/report.xml
+/fastlane/README.md

@@ -1,39 +1,69 @@
 # Architecture
 
-ServiceTones is a shared React application bundled as a responsive website and as Capacitor iOS/Android applications. The native directories are real Xcode and Gradle projects; the UI is a WebView application, not separate SwiftUI or Kotlin screens.
+## Source layout
 
-## Code map
+```text
+src/
+  shared/                  Types, Zod validation, lifecycle permissions, public config contract
+  client/
+    workspace.tsx          Authenticated shell, routing, account lifecycle, refresh/error handling
+    pages.tsx              Customer/provider/admin workspace screens
+    auth.ts                Firebase web auth + native Google/Apple credentials
+    api.ts                 Bearer-token API client and native external-browser handling
+    ui.tsx                 Shared accessible UI primitives
+  public-page.tsx           Public landing, service, and professional pages
+  entry-client.tsx          Hydration / native bootstrap
+  entry-server.tsx          SEO rendering, metadata, safe JSON serialization
+  styles.css               Shared responsive styles, readable colors and type
+  server/
+    index.ts               HTTP server, SSR, CORS, security headers, health/SEO routes
+    api.ts                 Authenticated API and integration endpoints
+    projects.ts            Transactional project commands
+    repository.ts          Role-scoped database reads, audit and notification outbox
+    webhooks.ts            Signed/idempotent Stripe events
+    config.ts              Server config validation and explicit public allowlist
+    db/                    Postgres connection, migrations and schema
+    integrations/          Firebase, Stripe, Daily, R2, Upstash, Maps, SMTP
+    worker.ts              Durable email-outbox delivery with retries
+android/                   Android native wrapper and signing configuration
+ios/                       iOS native wrapper, Google/Apple integration and entitlements
+config/environments.json   Branch → environment → mobile app identity
+scripts/                   Deployment, configuration and mobile packaging
+fastlane/                  TestFlight and Play distribution
+tests/                     Lifecycle, authorization, SQL, webhook, SEO and pipeline tests
+render.yaml                Three isolated web/worker/Postgres environments
+```
 
-- `components/marketplace.tsx`: discovery, signup/sign-in, project workflow, inbox, profile dialogs.
-- `hooks/use-calls.ts`: consent, device capture, WebRTC negotiation, ICE buffering, mute/camera controls and cleanup.
-- `components/call-panel.tsx`: incoming, outgoing, connected call presentation.
-- `shared/catalog.ts`: shared application types, services, clearly labeled sample listings.
-- `lib/api.ts`: authenticated API client. Session tokens are kept in tab session storage, not persistent local storage. Saved professionals are device-local preferences.
-- `server/app.mjs`: Express API, SQLite schema, authentication and Socket.IO signaling.
-- `server/test/integration.test.mjs`: real HTTP and WebSocket integration checks with isolated databases.
-- `android/`, `ios/`: generated native projects, media permissions and app configuration.
-- `vite.app.config.ts`: shared production bundle and local API proxy.
+## Data and authorization
 
-## Data and access
+Firebase proves identity. Every API request verifies the ID token, checks revocation and verified email, and loads the user's role from PostgreSQL. Registration accepts only customer or professional; an administrator must also possess a Firebase admin claim. URL changes never change account permissions.
 
-Users register as a customer or professional. Professional signup creates a public business profile. Each project belongs to one customer and optionally one professional. Only the assigned professional can accept or complete it, and only its customer can cancel it before completion. Customers can later assign an unassigned request to a professional in the matching service category.
+PostgreSQL stores users, profiles, projects, estimates, messages, payments, reviews, support tickets, notifications, blocked/saved relationships, private file references, audit events, webhook receipts and the email outbox. Migrations contain no INSERT statements for marketplace data. The legacy SQLite/localStorage preview is not loaded, migrated, or served.
 
-Conversations are unique per customer/pro pair. HTTP reads and writes check membership. WebSocket connections authenticate with the same expiring session. Messages are stored in SQLite and sent only to participant user rooms. The inbox currently loads the latest 200 messages per conversation; older messages remain stored but are not paginated in this version.
+Private workspace queries are scoped to the current user. Administrators can manage listings, cases and financial records but do not automatically receive private messages or project attachments. Public searches and profile pages only show verified, unsuspended listings. Provider opportunities omit customer identity until assignment.
 
-Passwords use a random salt and asynchronous scrypt. Random 256-bit session tokens are hashed in the database, expire after 24 hours, and are revoked on logout. The API has input validation, size limits, rate limits, security headers and configurable CORS origins. Production must use HTTPS. No credentials are committed.
+Projects use requested → quoted → booked → in_progress → completed, with explicit cancellation/dispute paths. Commands lock the project row, validate actor and stage, and update quotes and notifications in the same transaction. Monetary totals are integer USD cents. Checkout prices come from the accepted estimate, never the browser. Each project can have one payment record and one review.
 
-## Calls
+## Integrations and consistency
 
-Signaling authenticates both participants and checks conversation membership. An invitation must be accepted by its recipient before SDP/ICE signaling is permitted. Ringing expires after 60 seconds; an active signaling session expires after four hours. One call per participant is permitted. WebRTC sends media between devices, with a TURN relay when configured. The application does not record media.
+Stripe handles hosted Identity, Express Connect onboarding, Checkout destination charges, receipts and full refunds. Verification is updated only by matching a signed event to the stored verification session. Payment success is updated by signed webhooks, not a redirect. Event IDs, payment uniqueness and Stripe idempotency keys protect retries.
 
-Both apps must remain open. This version does not include push notifications, CallKit, Android foreground services or background/lock-screen calling. Mobile WebView media handling needs physical-device testing. Production networks generally require a TURN server; configure coturn REST shared-secret authentication with `TURN_URL` and `TURN_SECRET` for one-hour credentials.
+Daily issues project-specific private rooms and short-lived participant tokens. Calls open in the system/browser calling surface; camera and microphone permission is requested by that surface. This is a foreground calling flow, not native background ringing or push calling.
 
-## Deployment boundaries
+R2 uploads use short-lived signed URLs, project ownership checks, type/size allowlists, and a final object inspection. Buckets are private and downloads use short-lived URLs. Identity documents are never uploaded through R2.
 
-The Node server serves both `dist` and `/api` and handles WebSockets on a single origin. SQLite requires a durable local volume. Run one application instance; multiple replicas need shared storage and a Socket.IO adapter before scaling. Back up SQLite using its backup API or a consistent stopped-server volume snapshot, not a live copy of only the `.sqlite` file while WAL is active.
+Upstash provides shared per-user throttling; Express also limits requests per IP. PostgreSQL is the source of truth. The email worker consumes an outbox with row locks, exponential retry and an eight-attempt limit. Email delivery is at-least-once: a process failure after delivery but before acknowledgment can produce a duplicate alert.
 
-The private Sites deployment contains only the browsing frontend. It has no Node process or SQLite volume. To connect it to a separately deployed API, set `VITE_API_URL` before rebuilding and add that Site origin to `ALLOWED_ORIGINS`. The repository's Docker deployment supports the complete application on a Node host.
+The UI refreshes current data every ten seconds and on focus. This keeps web/mobile state consistent through the same backend; it is not a WebSocket push transport. Clients show loading/errors and do not claim success until the API succeeds.
 
-## Deliberately outside this first release
+## Environment model
 
-Payments, quotes, public review submissions, identity/license verification, email verification, password reset, account deletion/export, attachment uploads, moderation/blocking, appointment calendars, push notifications and admin tooling are not implemented. Do not present sample ratings as real customer reviews. Before a public commercial release, add the operational and account-management features appropriate to the service and complete security, accessibility and physical-device QA.
+All branches contain identical environment-independent application code after promotion. Runtime values come from Render groups. Web clients receive only the explicitly allowlisted `/api/config` fields. Mobile builds obtain that public config from the matching deployed SHA and bundle it with the same source commit. Private keys are never embedded in JavaScript.
+
+Native app code updates still require new signed builds and installation through the relevant store/test channel. Backend and website changes become available after Render deployment. There is no unsafe remote-code hot-patch mechanism.
+
+## SEO and accessibility
+
+Public landing, six service pages and verified professional profiles are server-rendered HTML with titles, descriptions, canonical links, Open Graph and JSON-LD. Sitemap URLs include real public profiles only. Non-production environments and private application routes are noindex; missing pages return 404. Do not treat robots directives as an access-control boundary.
+
+The shared stylesheet uses dark headings and readable body colors, responsive navigation, visible focus outlines, form labels, status/error announcements, and reduced-motion support. No synthetic ratings, job counts or customer testimonials are displayed.

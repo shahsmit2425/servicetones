@@ -1,0 +1,166 @@
+# Add credentials to the matching Render environment group. See docs/ENVIRONMENT_VARIABLES.md.
+services:
+  - type: web
+    name: servicetones-development
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: development
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    preDeployCommand: npm run config:check && npm run db:migrate
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: servicetones-development
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servicetones-development-db
+          property: connectionString
+  - type: worker
+    name: servicetones-development-mail
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: development
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev
+    startCommand: npm run worker
+    envVars:
+      - fromGroup: servicetones-development
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servicetones-development-db
+          property: connectionString
+  - type: web
+    name: servicetones-stagging
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: stagging
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    preDeployCommand: npm run config:check && npm run db:migrate
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: servicetones-stagging
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servicetones-stagging-db
+          property: connectionString
+  - type: worker
+    name: servicetones-stagging-mail
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: stagging
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev
+    startCommand: npm run worker
+    envVars:
+      - fromGroup: servicetones-stagging
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servicetones-stagging-db
+          property: connectionString
+  - type: web
+    name: servicetones-production
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: main
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    preDeployCommand: npm run config:check && npm run db:migrate
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: servicetones-production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servicetones-production-db
+          property: connectionString
+  - type: worker
+    name: servicetones-production-mail
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: main
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev
+    startCommand: npm run worker
+    envVars:
+      - fromGroup: servicetones-production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servicetones-production-db
+          property: connectionString
+databases:
+  - name: servicetones-development-db
+    plan: basic-256mb
+    region: ohio
+    databaseName: servicetones
+    user: servicetones
+    ipAllowList: []
+  - name: servicetones-stagging-db
+    plan: basic-256mb
+    region: ohio
+    databaseName: servicetones
+    user: servicetones
+    ipAllowList: []
+  - name: servicetones-production-db
+    plan: basic-256mb
+    region: ohio
+    databaseName: servicetones
+    user: servicetones
+    ipAllowList: []
+envVarGroups:
+  - name: servicetones-development
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: development
+      - key: DATABASE_SSL
+        value: render-internal
+      - key: SMTP_HOST
+        value: smtp.office365.com
+      - key: SMTP_PORT
+        value: 587
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        value: 10
+  - name: servicetones-stagging
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: stagging
+      - key: DATABASE_SSL
+        value: render-internal
+      - key: SMTP_HOST
+        value: smtp.office365.com
+      - key: SMTP_PORT
+        value: 587
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        value: 10
+  - name: servicetones-production
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_SSL
+        value: render-internal
+      - key: SMTP_HOST
+        value: smtp.office365.com
+      - key: SMTP_PORT
+        value: 587
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        value: 10
