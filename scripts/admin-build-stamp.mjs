@@ -1,13 +1,13 @@
 import { writeFileSync } from "node:fs";
-const environment = process.env.VITE_APP_ENV;
-const api = process.env.VITE_API_URL;
+const environment = process.env.APP_ENV;
+const api = process.env.API_URL;
 if (
   process.env.RENDER === "true" &&
   (!["development", "stagging", "production"].includes(environment) ||
     !api?.startsWith("https://"))
 )
   throw new Error(
-    "Set VITE_APP_ENV and HTTPS VITE_API_URL on the admin static site.",
+    "Set APP_ENV and HTTPS API_URL in the shared environment group.",
   );
 writeFileSync(
   "dist/admin/release.json",

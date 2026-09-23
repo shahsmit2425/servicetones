@@ -1,5 +1,5 @@
-# Four independent application/data services plus a mail worker in each environment.
-# Private environment groups attach only to API and worker.
+# One shared environment group per environment, linked to every application service.
+# Enter DATABASE_URL and provider credentials manually in each group.
 services:
   - type: web
     name: servicetones-development-api
@@ -14,12 +14,7 @@ services:
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-development-api
-      - &a1
-        key: DATABASE_URL
-        fromDatabase:
-          name: servicetones-development-db
-          property: connectionString
+      - fromGroup: servicetones-development
   - type: worker
     name: servicetones-development-mail
     runtime: node
@@ -31,8 +26,7 @@ services:
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-development-api
-      - *a1
+      - fromGroup: servicetones-development
   - type: web
     name: servicetones-development-web
     runtime: node
@@ -45,16 +39,7 @@ services:
     startCommand: npm run start:web
     healthCheckPath: /health
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: APP_ENV
-        value: development
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: SITE_URL
-        sync: false
-      - key: API_URL
-        sync: false
+      - fromGroup: servicetones-development
   - type: web
     name: servicetones-development-admin
     runtime: static
@@ -64,12 +49,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build:admin
     staticPublishPath: dist/admin
     envVars:
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: VITE_APP_ENV
-        value: development
-      - key: VITE_API_URL
-        sync: false
+      - fromGroup: servicetones-development
     headers:
       - path: /*
         name: X-Robots-Tag
@@ -112,12 +92,7 @@ services:
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-stagging-api
-      - &a2
-        key: DATABASE_URL
-        fromDatabase:
-          name: servicetones-stagging-db
-          property: connectionString
+      - fromGroup: servicetones-stagging
   - type: worker
     name: servicetones-stagging-mail
     runtime: node
@@ -129,8 +104,7 @@ services:
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-stagging-api
-      - *a2
+      - fromGroup: servicetones-stagging
   - type: web
     name: servicetones-stagging-web
     runtime: node
@@ -143,16 +117,7 @@ services:
     startCommand: npm run start:web
     healthCheckPath: /health
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: APP_ENV
-        value: stagging
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: SITE_URL
-        sync: false
-      - key: API_URL
-        sync: false
+      - fromGroup: servicetones-stagging
   - type: web
     name: servicetones-stagging-admin
     runtime: static
@@ -162,12 +127,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build:admin
     staticPublishPath: dist/admin
     envVars:
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: VITE_APP_ENV
-        value: stagging
-      - key: VITE_API_URL
-        sync: false
+      - fromGroup: servicetones-stagging
     headers:
       - path: /*
         name: X-Robots-Tag
@@ -210,12 +170,7 @@ services:
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-production-api
-      - &a3
-        key: DATABASE_URL
-        fromDatabase:
-          name: servicetones-production-db
-          property: connectionString
+      - fromGroup: servicetones-production
   - type: worker
     name: servicetones-production-mail
     runtime: node
@@ -227,8 +182,7 @@ services:
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-production-api
-      - *a3
+      - fromGroup: servicetones-production
   - type: web
     name: servicetones-production-web
     runtime: node
@@ -241,16 +195,7 @@ services:
     startCommand: npm run start:web
     healthCheckPath: /health
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: APP_ENV
-        value: production
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: SITE_URL
-        sync: false
-      - key: API_URL
-        sync: false
+      - fromGroup: servicetones-production
   - type: web
     name: servicetones-production-admin
     runtime: static
@@ -260,12 +205,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build:admin
     staticPublishPath: dist/admin
     envVars:
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: VITE_APP_ENV
-        value: production
-      - key: VITE_API_URL
-        sync: false
+      - fromGroup: servicetones-production
     headers:
       - path: /*
         name: X-Robots-Tag
@@ -315,7 +255,7 @@ databases:
     user: servicetones
     ipAllowList: []
 envVarGroups:
-  - name: servicetones-development-api
+  - name: servicetones-development
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -331,7 +271,7 @@ envVarGroups:
         value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
         value: "10"
-  - name: servicetones-stagging-api
+  - name: servicetones-stagging
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -347,7 +287,7 @@ envVarGroups:
         value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
         value: "10"
-  - name: servicetones-production-api
+  - name: servicetones-production
     envVars:
       - key: NODE_VERSION
         value: 22.16.0

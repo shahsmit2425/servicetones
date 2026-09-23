@@ -2,21 +2,17 @@
 
 ## Where values live
 
-Private application settings live in Render groups `servicetones-development-api`, `servicetones-stagging-api`, and `servicetones-production-api`. Link each group only to its API and mail worker. Never link them to either frontend.
+Use exactly one Render group per environment: `servicetones-development`, `servicetones-stagging`, `servicetones-production`. Link the matching group to customer web, admin static site, API and mail worker. Put all application variables below in that one group, including DATABASE_URL. Managed PostgreSQL itself does not consume an application environment group.
 
-| Service | Variables |
-| --- | --- |
-| Customer Web Service | NODE_ENV=production, NODE_VERSION=22.16.0, APP_ENV, SITE_URL, API_URL |
-| Admin Static Site | NODE_VERSION=22.16.0, VITE_APP_ENV, VITE_API_URL |
-| API and worker | Server/provider variables below; database URL injected separately by Blueprint |
+The Blueprint creates the groups and links, with non-secret defaults only. After creating the database, copy its internal connection URL into the matching group's DATABASE_URL. Enter API_URL (backend HTTPS origin), SITE_URL (customer HTTPS origin), APP_ENV and provider credentials once. Remove conflicting service-level overrides; Render gives individual settings precedence over group settings.
 
-`API_URL` is the HTTPS backend origin, without /api or a trailing slash. `SITE_URL` is the customer website origin. `VITE_API_URL` must equal the environment's API_URL; `VITE_APP_ENV` is development, stagging or production. VITE values are public build-time settings and require rebuilding admin when changed.
+Admin builds now derive their public settings from API_URL and APP_ENV. You no longer need VITE_API_URL or VITE_APP_ENV in Render. The admin build disables automatic prefixed-variable exposure and explicitly includes only these two settings. The customer receives an explicit public configuration allowlist from the API.
 
-Add `ADMIN_ALLOWED_UIDS` to the **API group only**: a comma-separated list of explicitly approved Firebase user IDs. An empty list disables all admin API access. This setting does not grant access alone; follow [ADMIN_SECURITY.md](ADMIN_SECURITY.md).
+Sharing a group makes secrets accessible to all linked build/runtime processes, including frontend build dependencies. It does not automatically put them in browser JavaScript. Never serialize process.env or the complete group to client code. Only trusted contributors should control builds that receive these credentials.
 
-`ALLOWED_ORIGINS` must include the customer origin, admin origin, capacitor://localhost and https://localhost. CORS is not the admin authorization boundary.
+Set ADMIN_ALLOWED_UIDS in this group to a comma-separated list of approved Firebase UIDs. An empty value disables admin API access. Follow [ADMIN_SECURITY.md](ADMIN_SECURITY.md) for the other required access checks.
 
-The same variable names apply in all environments with isolated credentials. The Blueprint supplies only non-secret defaults. Add real values manually; never commit them.
+ALLOWED_ORIGINS includes customer/admin origins plus capacitor://localhost and https://localhost. Keep Auto-Deploy off; after group configuration changes, run a full workflow dispatch to apply/rebuild all services. Code-only changes remain selectively deployed. GitHub deployment/signing credentials still belong in GitHub because its runners need them independently of Render.
 
 ## Core and database
 
@@ -28,7 +24,7 @@ The same variable names apply in all environments with isolated credentials. The
 | PORT | Render supplies; local defaults to `5173` | HTTP listening port |
 | SITE_URL | Required HTTPS on Render | Exact canonical website URL, no trailing slash |
 | ALLOWED_ORIGINS | Required for your domain setup | Comma-separated site origin plus `capacitor://localhost,https://localhost`; local origins only in development |
-| DATABASE_URL | Required; Blueprint injects | Matching Render Postgres **internal** connection string. Never expose publicly |
+| DATABASE_URL | Required; enter in shared group | Matching Render Postgres **internal** connection string. Never expose publicly |
 | DATABASE_SSL | Blueprint: `render-internal`; default: `require` | `require` validates certificates; `render-internal` encrypts to Render's private dpg host with its self-signed certificate; `disable` only for local Postgres |
 | DATABASE_CA_CERT | Optional | PEM CA for certificate-validated external Postgres connections |
 | RENDER_GIT_COMMIT | Render automatically supplies | Deployed commit ID; used to match web/mobile releases |

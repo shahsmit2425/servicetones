@@ -4,7 +4,7 @@
 
 ```text
 apps/
-  web/server.ts            Customer/pro website SSR process; calls public API, no database credentials
+  web/server.ts            Customer/pro website SSR process; reads only public API, never connects to database
   admin/                   Independent static admin app, sign-in, TOTP and administration screens
   api/server.ts            Dedicated backend process entry point
 src/
@@ -77,3 +77,5 @@ The shared stylesheet uses dark headings and readable body colors, responsive na
 `apps/admin` edits deploy only the admin site. Customer client edits deploy web/mobile. API edits deploy the API, and worker dependencies also deploy the mail worker. Shared contracts or dependency/configuration changes deploy all affected apps. Database migrations run only on API releases. A documentation-only push deploys nothing. GitHub validation still checks the entire repository.
 
 The API is a separately versioned compatible service: UI-only releases need not share its commit SHA. Breaking contracts require an expand/migrate/contract rollout; support installed native clients when retiring endpoints.
+
+All application services now link one shared Render group per environment. Database/provider secrets are available to their build/runtime processes, but browser output is explicitly allowlisted; the administrator build does not automatically expose prefixed environment variables.

@@ -17,12 +17,9 @@ test("Render services cannot auto-deploy another environment", () => {
     const target = mapping[s.branch as keyof typeof mapping];
     assert.ok(target);
     assert.ok(s.name.includes(target.environment));
-    if (s.name.endsWith("-api") || s.name.endsWith("-mail"))
-      assert.equal(
-        s.envVars[0].fromGroup,
-        "servicetones-" + target.environment + "-api",
-      );
-    else assert.ok(s.envVars.every((v: any) => !v.fromGroup));
+    assert.deepEqual(s.envVars, [
+      { fromGroup: "servicetones-" + target.environment },
+    ]);
   }
 });
 test("promotion guard rejects direct development-to-main changes", () => {
