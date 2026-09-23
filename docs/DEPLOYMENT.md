@@ -24,15 +24,15 @@ All repository root-directory fields stay blank. Select the environment's branch
 
 1. Create the development PostgreSQL database and the three application services plus mail worker above. Keep Node services/database in the same region. Alternatively apply `render.yaml` as a Blueprint; it creates **all three environments with paid web/API/worker/database plans**, so review its cost summary first.
 2. Record the assigned customer, API and admin HTTPS domains. The examples dev.yourdomain.com, api-dev.yourdomain.com and admin-dev.yourdomain.com are placeholders, not provisioned domains.
-3. Create group `servicetones-development` and link it to API, worker, customer web and admin static site. Enter all application/provider variables from [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md). Copy the development database internal URL into DATABASE_URL in this group and set DATABASE_SSL=render-internal. The database itself does not use an application group.
-4. In the shared group set NODE_ENV=production, APP_ENV=development, NODE_VERSION=22.16.0, SITE_URL and API_URL. Both frontends use these central values; remove conflicting per-service overrides.
-5. The admin build derives its public API URL and environment from API_URL and APP_ENV in the shared group. Do not create duplicate VITE variables. For manual static setup, copy the security headers and fallback rewrite from render.yaml; the build output is dist/admin.
+3. Create `servicetones-development-common` for all four application services and `servicetones-development-backend` for API/worker only. Enter provider credentials and the internal DATABASE_URL in backend; set DATABASE_SSL=render-internal there. PostgreSQL itself does not use an application group.
+4. In common set NODE_ENV=production, APP_ENV=development, NODE_VERSION=22.16.0, SITE_URL and API_URL. Keep all other application values in backend. Remove conflicting service-level overrides and duplicate keys between groups.
+5. The admin build derives its public API URL and environment from API_URL and APP_ENV in common. Do not create duplicate VITE variables. For manual static setup, copy the security headers and fallback rewrite from render.yaml; the build output is dist/admin.
 6. Add customer/admin origins to API ALLOWED_ORIGINS and Firebase authorized domains. Keep capacitor://localhost and https://localhost for mobile. Stripe webhook destinations use the **API domain**; return links use the customer SITE_URL.
 7. Populate the development GitHub Environment below, then manually run the release workflow on development. A manual run deploys all components; normal pushes select only affected components. Deployments occur API → worker → web → admin when selected. Each selected service must report the exact deployed SHA and environment (worker has no HTTP endpoint).
 8. Provision your administrator using [ADMIN_SECURITY.md](ADMIN_SECURITY.md). Enable Firebase Identity Platform TOTP, approve the UID, provision its database role/custom claim, enroll MFA and sign in again. No administrator exists by default.
 9. Test the development flows before promoting code to stagging and main. Repeat setup with isolated credentials and separate resources for each environment.
 
-If you already created the old combined service, reuse it as the **API** only after changing its start/build commands. Create the separate web/admin services, move customer SITE_URL to the new web domain, update native API_URL/Firebase/Stripe/CORS settings and GitHub service IDs, then redeploy. Link the one matching environment group to every application service and remove obsolete service-level values. Existing real database data is retained; no schema reset is part of this refactor.
+If you already created the old combined service, reuse it as the **API** only after changing its start/build commands. Create the separate web/admin services, move customer SITE_URL to the new web domain, update native API_URL/Firebase/Stripe/CORS settings and GitHub service IDs, then redeploy. Link common to all application services, backend to API/worker only, unlink the old single group, remove obsolete service-level values and rebuild the frontends. Existing real database data is retained; no schema reset is part of this refactor.
 
 ## GitHub configuration and selective deployment
 
@@ -103,6 +103,6 @@ Use a reviewed revert on `development`, then promote it. For urgent rollback, Re
 
 The workflow and source are configured; external accounts, service URLs, credentials and signing files must be supplied before a deployment can complete. No Render domain, signed IPA/AAB, TestFlight upload or Play release is claimed merely because code was pushed.
 
-## Shared configuration updates
+## Configuration changes
 
-Changing a group can affect every linked service. Keep auto-deploy off and use a full workflow dispatch after configuration changes, including rebuilds of the static admin and mobile apps when public API settings change. Render settings updates and code-only selective deployment are separate operations. Secrets are available to linked build processes but excluded from browser output by explicit configuration allowlists.
+Changing common values can affect all applications. Changing backend credentials only requires applying them to API/worker. Keep auto-deploy off; manually redeploy/rebuild affected services after environment edits, or use full workflow dispatch for all. Frontend build/runtime processes must not receive the backend group. Public output remains explicitly allowlisted.

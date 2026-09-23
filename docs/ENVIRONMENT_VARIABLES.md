@@ -2,17 +2,34 @@
 
 ## Where values live
 
-Use exactly one Render group per environment: `servicetones-development`, `servicetones-stagging`, `servicetones-production`. Link the matching group to customer web, admin static site, API and mail worker. Put all application variables below in that one group, including DATABASE_URL. Managed PostgreSQL itself does not consume an application environment group.
+Use two Render groups per environment. Replace development with stagging or production for the other environments.
 
-The Blueprint creates the groups and links, with non-secret defaults only. After creating the database, copy its internal connection URL into the matching group's DATABASE_URL. Enter API_URL (backend HTTPS origin), SITE_URL (customer HTTPS origin), APP_ENV and provider credentials once. Remove conflicting service-level overrides; Render gives individual settings precedence over group settings.
+| Group | Linked services | Variables |
+| --- | --- | --- |
+| servicetones-development-common | Customer web, admin static site, API, mail worker | NODE_ENV, NODE_VERSION, APP_ENV, SITE_URL, API_URL |
+| servicetones-development-backend | API and mail worker only | Every other application variable below, including DATABASE_URL, ADMIN_ALLOWED_UIDS and provider credentials |
 
-Admin builds now derive their public settings from API_URL and APP_ENV. You no longer need VITE_API_URL or VITE_APP_ENV in Render. The admin build disables automatic prefixed-variable exposure and explicitly includes only these two settings. The customer receives an explicit public configuration allowlist from the API.
+The Blueprint creates six groups and links them to the correct services. It supplies non-secret defaults only. Add SITE_URL/API_URL manually to common. After creating the database, copy its internal URL into backend DATABASE_URL. PostgreSQL itself does not consume an application group. Do not duplicate variable names between groups or leave conflicting service-level overrides.
 
-Sharing a group makes secrets accessible to all linked build/runtime processes, including frontend build dependencies. It does not automatically put them in browser JavaScript. Never serialize process.env or the complete group to client code. Only trusted contributors should control builds that receive these credentials.
+Common development values:
 
-Set ADMIN_ALLOWED_UIDS in this group to a comma-separated list of approved Firebase UIDs. An empty value disables admin API access. Follow [ADMIN_SECURITY.md](ADMIN_SECURITY.md) for the other required access checks.
+```dotenv
+NODE_ENV=production
+NODE_VERSION=22.16.0
+APP_ENV=development
+SITE_URL=https://<customer-domain>
+API_URL=https://<api-domain>
+```
 
-ALLOWED_ORIGINS includes customer/admin origins plus capacitor://localhost and https://localhost. Keep Auto-Deploy off; after group configuration changes, run a full workflow dispatch to apply/rebuild all services. Code-only changes remain selectively deployed. GitHub deployment/signing credentials still belong in GitHub because its runners need them independently of Render.
+Put ALLOWED_ORIGINS, SUPPORT_EMAIL, DATABASE_URL, DATABASE_SSL, optional DATABASE_CA_CERT, all FIREBASE_* values, ADMIN_ALLOWED_UIDS, UPSTASH_*, STRIPE_*, DAILY_API_KEY, R2_*, GOOGLE_MAPS_SERVER_KEY, SMTP_*, MICROSOFT_*, SENTRY_DSN and PUBLIC_SENTRY_DSN in backend. Some of these are non-secret, but only the backend consumes them directly. Its public-config allowlist intentionally returns the Firebase web configuration, public Sentry DSN and support email to clients.
+
+Admin builds derive their public settings from common API_URL and APP_ENV; do not add duplicate VITE variables. Both frontend build configurations disable automatic prefixed-variable exposure. Private values must never appear in browser bundles or public configuration.
+
+Leave ADMIN_ALLOWED_UIDS empty until provisioning; this disables admin API access. Follow [ADMIN_SECURITY.md](ADMIN_SECURITY.md). ALLOWED_ORIGINS includes customer/admin origins plus capacitor://localhost and https://localhost.
+
+Keep Auto-Deploy off. Apply configuration changes by redeploying the services that use the changed values; rebuild admin/mobile when their bundled public configuration changes. A full workflow dispatch is available if all services need refreshing. Code-only pushes still use selective deployment. GitHub signing/deployment secrets remain in GitHub Environments.
+
+If migrating from the previous single group: create/populate both new groups first; link common to all application services and backend to API/worker; unlink the old group from every service; remove duplicate service-level variables; then redeploy/rebuild. Renaming an old secret-bearing group to common is not sufficient—remove its credentials first. Rebuild both frontends so their running/build configuration no longer includes the old group. Existing database records are unchanged.
 
 ## Core and database
 
@@ -24,7 +41,7 @@ ALLOWED_ORIGINS includes customer/admin origins plus capacitor://localhost and h
 | PORT | Render supplies; local defaults to `5173` | HTTP listening port |
 | SITE_URL | Required HTTPS on Render | Exact canonical website URL, no trailing slash |
 | ALLOWED_ORIGINS | Required for your domain setup | Comma-separated site origin plus `capacitor://localhost,https://localhost`; local origins only in development |
-| DATABASE_URL | Required; enter in shared group | Matching Render Postgres **internal** connection string. Never expose publicly |
+| DATABASE_URL | Required; enter in backend group | Matching Render Postgres **internal** connection string. Never expose publicly |
 | DATABASE_SSL | Blueprint: `render-internal`; default: `require` | `require` validates certificates; `render-internal` encrypts to Render's private dpg host with its self-signed certificate; `disable` only for local Postgres |
 | DATABASE_CA_CERT | Optional | PEM CA for certificate-validated external Postgres connections |
 | RENDER_GIT_COMMIT | Render automatically supplies | Deployed commit ID; used to match web/mobile releases |

@@ -12,13 +12,28 @@ test("Render services cannot auto-deploy another environment", () => {
   const b = parse(readFileSync("render.yaml", "utf8"));
   assert.equal(b.services.length, 12);
   assert.equal(b.databases.length, 3);
+  assert.equal(b.envVarGroups.length, 6);
+  for (const group of b.envVarGroups.filter((g: any) =>
+    g.name.endsWith("-common"),
+  )) {
+    assert.ok(
+      group.envVars.every((v: any) =>
+        ["NODE_ENV", "NODE_VERSION", "APP_ENV", "SITE_URL", "API_URL"].includes(
+          v.key,
+        ),
+      ),
+    );
+  }
   for (const s of b.services) {
     assert.equal(s.autoDeployTrigger, "off");
     const target = mapping[s.branch as keyof typeof mapping];
     assert.ok(target);
     assert.ok(s.name.includes(target.environment));
     assert.deepEqual(s.envVars, [
-      { fromGroup: "servicetones-" + target.environment },
+      { fromGroup: "servicetones-" + target.environment + "-common" },
+      ...(s.name.endsWith("-api") || s.name.endsWith("-mail")
+        ? [{ fromGroup: "servicetones-" + target.environment + "-backend" }]
+        : []),
     ]);
   }
 });

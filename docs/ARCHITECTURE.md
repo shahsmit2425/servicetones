@@ -78,4 +78,4 @@ The shared stylesheet uses dark headings and readable body colors, responsive na
 
 The API is a separately versioned compatible service: UI-only releases need not share its commit SHA. Breaking contracts require an expand/migrate/contract rollout; support installed native clients when retiring endpoints.
 
-All application services now link one shared Render group per environment. Database/provider secrets are available to their build/runtime processes, but browser output is explicitly allowlisted; the administrator build does not automatically expose prefixed environment variables.
+Each environment has common settings shared by every application service and backend settings linked only to API/worker. Frontend builds and runtimes receive no database/provider private credentials. Browser output remains explicitly allowlisted; neither frontend automatically exposes prefixed environment variables.

@@ -43,6 +43,6 @@ Lost authenticator recovery is an operator process: revoke access, verify the ad
 
 ## Hosting and validation
 
-The admin static site links the same environment group as the other services. Its build has access to that group, but explicitly bundles only API_URL and APP_ENV; automatic VITE-prefixed environment exposure is disabled. Do not copy private credentials into client source or public configuration. Authorize the admin domain in Firebase and include it in API `ALLOWED_ORIGINS`.
+The admin static site links only the common group. Its build receives no backend group credentials and explicitly bundles only API_URL and APP_ENV; automatic VITE-prefixed environment exposure is disabled. Do not copy private credentials into client source or public configuration. Authorize the admin domain in Firebase and include it in API `ALLOWED_ORIGINS`.
 
 Automated tests exercise allowlist, role, claim, identity, MFA and session-age denial paths. Actual Firebase/Identity Platform enrollment, revoked-token behavior and two-device sign-in must also be tested with configured service accounts before public launch.

@@ -1,5 +1,5 @@
-# One shared environment group per environment, linked to every application service.
-# Enter DATABASE_URL and provider credentials manually in each group.
+# Common settings reach all application services; backend configuration reaches only API/worker.
+# Add SITE_URL and API_URL to common; DATABASE_URL and credentials to backend manually.
 services:
   - type: web
     name: servicetones-development-api
@@ -14,7 +14,8 @@ services:
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-development
+      - fromGroup: servicetones-development-common
+      - fromGroup: servicetones-development-backend
   - type: worker
     name: servicetones-development-mail
     runtime: node
@@ -26,7 +27,8 @@ services:
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-development
+      - fromGroup: servicetones-development-common
+      - fromGroup: servicetones-development-backend
   - type: web
     name: servicetones-development-web
     runtime: node
@@ -39,7 +41,7 @@ services:
     startCommand: npm run start:web
     healthCheckPath: /health
     envVars:
-      - fromGroup: servicetones-development
+      - fromGroup: servicetones-development-common
   - type: web
     name: servicetones-development-admin
     runtime: static
@@ -49,7 +51,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build:admin
     staticPublishPath: dist/admin
     envVars:
-      - fromGroup: servicetones-development
+      - fromGroup: servicetones-development-common
     headers:
       - path: /*
         name: X-Robots-Tag
@@ -92,7 +94,8 @@ services:
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-stagging
+      - fromGroup: servicetones-stagging-common
+      - fromGroup: servicetones-stagging-backend
   - type: worker
     name: servicetones-stagging-mail
     runtime: node
@@ -104,7 +107,8 @@ services:
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-stagging
+      - fromGroup: servicetones-stagging-common
+      - fromGroup: servicetones-stagging-backend
   - type: web
     name: servicetones-stagging-web
     runtime: node
@@ -117,7 +121,7 @@ services:
     startCommand: npm run start:web
     healthCheckPath: /health
     envVars:
-      - fromGroup: servicetones-stagging
+      - fromGroup: servicetones-stagging-common
   - type: web
     name: servicetones-stagging-admin
     runtime: static
@@ -127,7 +131,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build:admin
     staticPublishPath: dist/admin
     envVars:
-      - fromGroup: servicetones-stagging
+      - fromGroup: servicetones-stagging-common
     headers:
       - path: /*
         name: X-Robots-Tag
@@ -170,7 +174,8 @@ services:
     preDeployCommand: npm run config:check && npm run db:migrate
     healthCheckPath: /api/health
     envVars:
-      - fromGroup: servicetones-production
+      - fromGroup: servicetones-production-common
+      - fromGroup: servicetones-production-backend
   - type: worker
     name: servicetones-production-mail
     runtime: node
@@ -182,7 +187,8 @@ services:
     buildCommand: npm ci --include=dev
     startCommand: npm run worker
     envVars:
-      - fromGroup: servicetones-production
+      - fromGroup: servicetones-production-common
+      - fromGroup: servicetones-production-backend
   - type: web
     name: servicetones-production-web
     runtime: node
@@ -195,7 +201,7 @@ services:
     startCommand: npm run start:web
     healthCheckPath: /health
     envVars:
-      - fromGroup: servicetones-production
+      - fromGroup: servicetones-production-common
   - type: web
     name: servicetones-production-admin
     runtime: static
@@ -205,7 +211,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build:admin
     staticPublishPath: dist/admin
     envVars:
-      - fromGroup: servicetones-production
+      - fromGroup: servicetones-production-common
     headers:
       - path: /*
         name: X-Robots-Tag
@@ -255,7 +261,7 @@ databases:
     user: servicetones
     ipAllowList: []
 envVarGroups:
-  - name: servicetones-development
+  - name: servicetones-development-common
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -263,6 +269,8 @@ envVarGroups:
         value: production
       - key: APP_ENV
         value: development
+  - name: servicetones-development-backend
+    envVars:
       - key: DATABASE_SSL
         value: render-internal
       - key: SMTP_HOST
@@ -271,7 +279,7 @@ envVarGroups:
         value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
         value: "10"
-  - name: servicetones-stagging
+  - name: servicetones-stagging-common
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -279,6 +287,8 @@ envVarGroups:
         value: production
       - key: APP_ENV
         value: stagging
+  - name: servicetones-stagging-backend
+    envVars:
       - key: DATABASE_SSL
         value: render-internal
       - key: SMTP_HOST
@@ -287,7 +297,7 @@ envVarGroups:
         value: "587"
       - key: STRIPE_PLATFORM_FEE_PERCENT
         value: "10"
-  - name: servicetones-production
+  - name: servicetones-production-common
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
@@ -295,6 +305,8 @@ envVarGroups:
         value: production
       - key: APP_ENV
         value: production
+  - name: servicetones-production-backend
+    envVars:
       - key: DATABASE_SSL
         value: render-internal
       - key: SMTP_HOST
